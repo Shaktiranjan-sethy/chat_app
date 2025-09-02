@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Chat App</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      width: 90%;
+      max-width: 500px;
+      animation: slideUp 0.6s ease-out;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Join Section */
+    #join-section {
+      padding: 40px 30px;
+      text-align: center;
+    }
+
+    #join-section h2 {
+      font-size: 28px;
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 15px 50px 15px 20px;
+      border: 2px solid #e1e5e9;
+      border-radius: 12px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+    }
+
+    .input-group i {
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #667eea;
+      font-size: 18px;
+    }
+
+    .join-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .join-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .join-btn:active {
+      transform: translateY(-1px);
+    }
+
+    /* Chat Section */
+    #chat-section {
+      display: none;
+      height: 600px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      padding: 20px 25px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chat-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .room-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #4ade80;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    #chat {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #f8f9fa;
+    }
+
+    #chat::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #chat::-webkit-scrollbar-track {
+      background: #e1e5e9;
+      border-radius: 3px;
+    }
+
+    #chat::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 3px;
+    }
+
+    .message {
+      margin-bottom: 15px;
+      animation: messageSlide 0.3s ease-out;
+    }
+
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .message .username {
+      font-weight: 600;
+      color: #667eea;
+      margin-right: 8px;
+    }
+
+    .message .text {
+      color: #2d3748;
+      word-wrap: break-word;
+    }
+
+    .notification {
+      color: #6b7280;
+      font-style: italic;
+      text-align: center;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+
+    #typing {
+      padding: 10px 20px;
+      color: #6b7280;
+      font-style: italic;
+      font-size: 14px;
+      min-height: 20px;
+      background: #f1f3f4;
+    }
+
+    .typing-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .typing-dots {
+      display: inline-flex;
+      gap: 2px;
+    }
+
+    .typing-dots span {
+      width: 4px;
+      height: 4px;
+      background: #667eea;
+      border-radius: 50%;
+      animation: typingDots 1.4s ease-in-out infinite both;
+    }
+
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes typingDots {
+      0%, 80%, 100% {
+        transform: scale(0);
+        opacity: 0.5;
+      }
+      40% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .message-input {
+      padding: 20px;
+      background: white;
+      border-top: 1px solid #e1e5e9;
+    }
+
+    .input-container {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    #msg {
+      flex: 1;
+      padding: 12px 18px;
+      border: 2px solid #e1e5e9;
+      border-radius: 25px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
+    }
+
+    #msg:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    }
+
+    .send-btn {
+      width: 45px;
+      height: 45px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .send-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .send-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+      .container {
+        width: 95%;
+        margin: 10px;
+      }
+
+      #join-section {
+        padding: 30px 20px;
+      }
+
+      #chat-section {
+        height: 500px;
+      }
+
+      .chat-header {
+        padding: 15px 20px;
+      }
+
+      .chat-header h3 {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="join-section">
+      <h2><i class="fas fa-comments"></i> Join Chat Room</h2>
+      <div class="input-group">
+        <input id="username" placeholder="Enter your name" maxlength="20" />
+        <i class="fas fa-user"></i>
+      </div>
+      <div class="input-group">
+        <input id="room" placeholder="Enter room name" maxlength="20" />
+        <i class="fas fa-door-open"></i>
+      </div>
+      <button class="join-btn" onclick="joinRoom()">
+        <i class="fas fa-sign-in-alt"></i> Join Room
+      </button>
+    </div>
+
+    <div id="chat-section">
+      <div class="chat-header">
+        <div class="room-info">
+          <div class="status-dot"></div>
+          <h3>Room: <span id="roomName"></span></h3>
+        </div>
+        <i class="fas fa-users"></i>
+      </div>
+      <div id="chat"></div>
+      <div id="typing"></div>
+      <div class="message-input">
+        <div class="input-container">
+          <input id="msg" placeholder="Type your message..." maxlength="500" 
+                 oninput="startTyping()" onblur="stopTyping()" 
+                 onkeypress="handleKeyPress(event)"/>
+          <button class="send-btn" onclick="sendMessage()">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+    let username, room;
+    let typingTimeout;
+
+    function joinRoom() {
+      username = document.getElementById("username").value.trim();
+      room = document.getElementById("room").value.trim();
+
+      if(username && room) {
+        socket.emit("joinRoom", { username, room });
+
+        // Hide join form, show chat with animation
+        document.getElementById("join-section").style.display = "none";
+        document.getElementById("chat-section").style.display = "flex";
+        document.getElementById("roomName").innerText = room;
+        
+        // Focus on message input
+        setTimeout(() => {
+          document.getElementById("msg").focus();
+        }, 300);
+      } else {
+        // Better error handling with styled alerts
+        showAlert("Please enter both username and room name", "error");
+      }
+    }
+
+    function sendMessage() {
+      const msg = document.getElementById("msg").value.trim();
+      if(msg) {
+        socket.emit("chatMessage", msg);
+        document.getElementById("msg").value = "";
+        stopTyping();
+      }
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    }
+
+    function startTyping() {
+      socket.emit("typing");
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(stopTyping, 2000);
+    }
+
+    function stopTyping() {
+      socket.emit("stopTyping");
+    }
+
+    function showAlert(message, type) {
+      // Simple alert replacement - you can enhance this further
+      const alertDiv = document.createElement('div');
+      alertDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'error' ? '#f87171' : '#34d399'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+      `;
+      alertDiv.textContent = message;
+      document.body.appendChild(alertDiv);
+      
+      setTimeout(() => {
+        alertDiv.remove();
+      }, 3000);
+    }
+
+    // Load old messages
+    socket.on("loadMessages", (messages) => {
+      const chat = document.getElementById("chat");
+      chat.innerHTML = "";
+      messages.forEach(m => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message';
+        messageDiv.innerHTML = `<span class="username">${m.username}:</span><span class="text">${m.message}</span>`;
+        chat.appendChild(messageDiv);
+      });
+      chat.scrollTop = chat.scrollHeight;
+    });
+
+    // New message
+    socket.on("chatMessage", (data) => {
+      const chat = document.getElementById("chat");
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message';
+      messageDiv.innerHTML = `<span class="username">${data.username}:</span><span class="text">${data.message}</span>`;
+      chat.appendChild(messageDiv);
+      chat.scrollTop = chat.scrollHeight;
+    });
+
+    // Notifications
+    socket.on("notification", (msg) => {
+      const chat = document.getElementById("chat");
+      const notificationDiv = document.createElement('div');
+      notificationDiv.className = 'notification';
+      notificationDiv.textContent = msg;
+      chat.appendChild(notificationDiv);
+      chat.scrollTop = chat.scrollHeight;
+    });
+
+    // Typing indicator
+    socket.on("typing", (msg) => {
+      const typingEl = document.getElementById("typing");
+      typingEl.innerHTML = `
+        <div class="typing-indicator">
+          ${msg}
+          <div class="typing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      `;
+    });
+
+    socket.on("stopTyping", () => {
+      document.getElementById("typing").innerHTML = "";
+    });
+
+    // Add some CSS animations via JavaScript
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>
