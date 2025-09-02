@@ -1,16 +1,23 @@
 import express from 'express';
-import http from 'http'
-import { Server } from 'socket.io'
-import mongoose from "mongoose";
-import {Chat} from './models/Chat.js'
+import http from 'http';
+import { Server } from 'socket.io';
+import mongoose from "mongoose"; 
+import { Chat } from './models/Chat.js';
+ 
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-mongoose.connect("mongodb://127.0.0.1:27017/chatapp")
+// ✅ Use environment variable for MongoDB URI
+const MONGO_URI = "mongodb+srv://sethyshaktiranjan_db_user:ZlwF3eMG3yFlmdGs@cluster0.irlb2de.mongodb.net/chat_app";
+
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
   .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.error(err));
+  .catch(err => console.error("❌ MongoDB connection error:", err));
 
 app.use(express.static("public"));
 
@@ -45,7 +52,6 @@ io.on("connection", (socket) => {
 
   // Typing indicator
   socket.on("typing", () => {
-   // console.log( `${socket.username} is typing...`);
     socket.to(socket.room).emit("typing", `${socket.username} is typing...`);
   });
 
